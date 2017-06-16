@@ -1,0 +1,9 @@
+?
+if(StrToFloat(hora)<0) then
+        begin
+                hora := (inputbox('Funcionario','Horas Trabalhadas:',''));
+        end
+        else
+?
+
+como não deixar entrar com um valor string em um lugar inteiro

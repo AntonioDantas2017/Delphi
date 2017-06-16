@@ -1,0 +1,305 @@
+unit Unit1;
+
+interface
+
+uses
+  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
+  Dialogs, DB, DBTables, StdCtrls, Grids, DBGrids, ExtCtrls;
+
+type
+  TForm1 = class(TForm)
+    DataSource1: TDataSource;
+    DBGrid1: TDBGrid;
+    pnlcod: TPanel;
+    txtcod: TEdit;
+    pnlcampos: TPanel;
+    txtri: TEdit;
+    txtre: TEdit;
+    txth: TEdit;
+    cbomes: TComboBox;
+    pnlbotoes: TPanel;
+    cmdexc: TButton;
+    cmdalt: TButton;
+    cmdcad: TButton;
+    pnlconfirm: TPanel;
+    cmdconfirma: TButton;
+    cmdcancela: TButton;
+    lblmsg: TLabel;
+    cmdcon: TButton;
+    pnlvolume: TPanel;
+    lblvol: TLabel;
+    lblr: TLabel;
+    sql: TQuery;
+    Label1: TLabel;
+    lblmedia: TLabel;
+    Label2: TLabel;
+    Label4: TLabel;
+    Label5: TLabel;
+    Label6: TLabel;
+    Label7: TLabel;
+    pnlcalculo: TPanel;
+    Label3: TLabel;
+    lblr2: TLabel;
+    DataSource2: TDataSource;
+    sql2: TQuery;
+    lstporcentagem: TListBox;
+    Label8: TLabel;
+    ListBox1: TListBox;
+    procedure cmdcadClick(Sender: TObject);
+    procedure cmdconClick(Sender: TObject);
+    procedure FormActivate(Sender: TObject);
+    procedure cmdconfirmaClick(Sender: TObject);
+    procedure cmdaltClick(Sender: TObject);
+    procedure cmdexcClick(Sender: TObject);
+    procedure cmdcancelaClick(Sender: TObject);
+    procedure txtriExit(Sender: TObject);
+  private
+    { Private declarations }
+  public
+     botao : integer;
+     vetor_mes : Array[0..11] of double;
+     qtd : Array[0..11] of integer;
+    { Public declarations }
+
+  end;
+
+var
+  Form1: TForm1;
+
+implementation
+
+{$R *.dfm}
+function calc_vol(ri:double;re:double;h:double):double;
+        begin
+        calc_vol := Pi * h * (sqr(re) - sqr(ri));
+        end;
+
+procedure mostra();
+begin
+        Form1.txth.Text := Form1.sql['altura'];
+        Form1.txtre.Text := Form1.sql['raioe'];
+        Form1.txtri.Text := Form1.sql['raioi'];
+        Form1.lblr.Caption := FloatToStr(calc_vol(Form1.sql['raioi'],Form1.sql['raioe'],Form1.sql['altura']));
+        Form1.cbomes.ItemIndex := Form1.sql['numero_mes'];
+end;
+
+procedure voltar();
+begin
+Form1.txth.Text := '';
+Form1.txtri.Text := '';
+Form1.txtre.Text := '';
+Form1.pnlcampos.Enabled := false;
+Form1.pnlconfirm.Visible := false;
+Form1.pnlcod.Enabled := true;
+Form1.pnlcalculo.Visible := false;
+Form1.pnlbotoes.Enabled := true;
+Form1.lblr.Caption := '0';
+Form1.cbomes.ItemIndex := 0;
+Form1.txtcod.Text := '';
+Form1.txtcod.SetFocus;
+Form1.sql.SQL.Clear;
+Form1.sql.SQL.Add('select * from projeto order by numero_mes');
+Form1.sql.Open;
+Form1.sql.Active := true;
+end;
+
+procedure reflesh();
+var
+volume,soma_refugados,qtd2,porc  : double;
+i : integer;
+begin
+Form1.sql2.SQL.Clear;
+Form1.sql2.SQL.Add('Select * from projeto');
+Form1.sql2.Open;
+soma_refugados := 0;
+qtd2 := 0;
+while not Form1.sql2.Eof do
+begin
+        volume := calc_vol(Form1.sql2['raioi'],Form1.sql2['raioe'],Form1.sql2['altura']);
+        if (volume < 20) or (volume > 30) then
+        begin
+                soma_refugados := soma_refugados + volume;
+                qtd2 := qtd2 + 1;
+                qtd[StrToInt(Form1.sql2['numero_mes'])] := qtd[StrToInt(Form1.sql2['numero_mes'])] + 1;
+                Form1.vetor_mes[StrToInt(Form1.sql2['numero_mes'])] := Form1.vetor_mes[StrToInt(Form1.sql2['numero_mes'])] + volume;
+        end;
+        Form1.sql2.Next;
+end;
+
+Form1.lblmedia.Caption := floattostrf(strtofloat(FloatToStr(soma_refugados / qtd2)),ffFixed,5,2);
+
+Form1.lstporcentagem.Clear;
+
+for i:=0 to 11 do
+begin
+        porc := Form1.vetor_mes[i] / qtd[i];
+        Form1.lstporcentagem.Items.Add((floattostrf(strtofloat(FloatToStr(porc)),ffFixed,2,2)));
+end;
+end;
+
+procedure TForm1.FormActivate(Sender: TObject);
+begin
+reflesh();
+txtcod.SetFocus;        
+end;
+
+procedure TForm1.cmdcadClick(Sender: TObject);
+begin
+  sql.SQL.Clear;
+  sql.SQL.Add('Select * from projeto where :cod = cod') ;
+  sql.ParamByName('cod').Value  := StrToInt(txtcod.Text);
+  sql.Open;
+
+  if sql.Eof then
+    begin
+        pnlcampos.Enabled := true;
+        pnlconfirm.Visible := true;
+        pnlbotoes.Enabled := false;
+        botao := 1;
+        lblmsg.Caption := 'Digite as  informações acima e clique em confirmar para cadastrar';
+        cbomes.SetFocus;
+    end
+  else
+    begin
+        ShowMessage('Código já cadastrado digite outro código');
+        voltar();
+    end;
+
+
+
+end;
+
+procedure TForm1.cmdconClick(Sender: TObject);
+begin
+  sql.SQL.Clear;
+  sql.SQL.Add('Select * from projeto where :cod = cod') ;
+  sql.ParamByName('cod').Value  := StrToInt(txtcod.Text);
+  sql.Open;
+
+  if sql.Eof then
+    begin
+        ShowMessage('Registro não encontrado');
+        voltar();
+    end
+  else
+     begin
+        mostra();
+     end;
+
+
+end;
+
+procedure TForm1.cmdconfirmaClick(Sender: TObject);
+var
+volume,soma_refugados,qtd,porc,vol  : double;
+i : integer;
+begin
+
+if botao = 1 then
+  begin
+        sql.SQL.Clear;
+        sql.SQL.Add('Insert into projeto(cod,mes,numero_mes,altura,raioe,raioi)');
+        sql.SQL.Add('values('+txtcod.Text+',"'+cbomes.Text+'",'+IntToStr(cbomes.ItemIndex)+','+StringReplace(txth.Text,',','.',[rfReplaceAll])+','+StringReplace(txtre.Text,',','.',[rfReplaceAll])+','+StringReplace(txtri.Text,',','.',[rfReplaceAll])+')') ;
+
+        ShowMessage(sql.SQL.Text);
+        sql.ExecSQL;
+  end
+else
+  begin
+        if botao = 2 then
+          begin
+                sql.SQL.Clear;
+                sql.SQL.Add('update projeto set mes = "'+cbomes.Text+'", numero_mes = '+IntToStr(cbomes.ItemIndex)+', ');
+                sql.SQL.Add('altura = '+StringReplace(txth.Text,',','.',[rfReplaceAll])+', raioe = '+StringReplace(txtre.Text,',','.',[rfReplaceAll])+', raioi = '+StringReplace(txtri.Text,',','.',[rfReplaceAll])+' where cod = :cod');
+                sql.ParamByName('cod').Value := StrToInt(txtcod.Text);
+                ShowMessage(sql.SQL.Text);
+                sql.ExecSQL;
+          end
+        else
+          begin
+                sql.SQL.Clear;
+                sql.SQL.Add('delete from projeto where cod = '+(txtcod.Text)+' ');
+                ShowMessage(sql.SQL.Text);
+                sql.ExecSQL;
+          end;
+  end;
+
+reflesh();
+
+voltar();
+
+end;
+
+procedure TForm1.cmdaltClick(Sender: TObject);
+begin
+  sql.SQL.Clear;
+  sql.SQL.Add('Select * from projeto where :cod = cod') ;
+  sql.ParamByName('cod').Value  := StrToInt(txtcod.Text);
+  sql.Open;
+
+  if sql.Eof then
+    begin
+        ShowMessage('Código não cadastrado digite outro código');
+        voltar();        
+    end
+  else
+    begin
+        pnlcampos.Enabled := true;
+        pnlconfirm.Visible := true;
+        pnlbotoes.Enabled := false;
+        botao := 2;
+        txth.Text := sql['altura'];
+        txtre.Text := sql['raioe'];
+        txtri.Text := sql['raioi'];
+        cbomes.ItemIndex := sql['numero_mes'];
+        lblr.Caption := floattostrf(strtofloat(FloatToStr(calc_vol(sql['raioi'],sql['raioe'],sql['altura']))),ffFixed,5,3);
+        lblmsg.Caption := 'Altere as informações desejadas e clique em Confirmar para Alterar o registro';
+        cbomes.SetFocus;      
+    end;
+end;
+
+procedure TForm1.cmdexcClick(Sender: TObject);
+begin
+  sql.SQL.Clear;
+  sql.SQL.Add('Select * from projeto where :cod = cod') ;
+  sql.ParamByName('cod').Value  := StrToInt(txtcod.Text);
+  sql.Open;
+
+  if sql.Eof then
+    begin
+        ShowMessage('Código não cadastrado digite outro código');
+        voltar();        
+    end
+  else
+    begin
+        pnlcampos.Enabled := true;
+        pnlconfirm.Visible := true;
+        pnlbotoes.Enabled := false;
+        botao := 3;
+        lblr.Caption := floattostrf(strtofloat(FloatToStr(calc_vol(sql['raioi'],sql['raioe'],sql['altura']))),ffFixed,5,3);
+        lblmsg.Caption := 'Clique em Confirmar caso seja este o registro que deseja excluir';
+        mostra();
+    end;
+end;
+
+procedure TForm1.cmdcancelaClick(Sender: TObject);
+begin
+voltar();
+end;
+
+procedure TForm1.txtriExit(Sender: TObject);
+var
+ ri,re,h : double;
+begin
+if (txth.Text <> '') and (txtre.Text <> '') and (txtri.Text <> '') then
+begin
+pnlcalculo.Visible := true;
+ri := StrToFloat(txtri.Text);
+re := StrToFloat(txtre.Text);
+h := StrToFloat(txth.Text);
+lblr2.Caption := floattostrf(strtofloat(FloatToStr(calc_vol(ri,re,h))),ffFixed,5,3);
+cmdconfirma.SetFocus;
+end;
+end;
+
+end.
